@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Rover Pipeline Logs</title>
+<link rel="stylesheet" href="css/style.css" />
+<link rel="stylesheet" href="css/logs.css" />
+</head>
+<body>
+<header>
+  <h1>Pipeline Logs</h1>
+  <span id="connection-status">disconnected</span>
+  <a href="index.html" style="font-size:13px;color:var(--muted);">&larr; dashboard</a>
+</header>
+
+<main class="log-grid">
+  <section class="log-column" data-source="mosquitto">
+    <h2>Mosquitto <span class="dot" id="dot-mosquitto"></span></h2>
+    <div class="log-stats" id="stats-mosquitto">waiting for first message&hellip;</div>
+    <div class="log-tail" id="tail-mosquitto"></div>
+  </section>
+
+  <section class="log-column" data-source="ros2_sim">
+    <h2>ROS 2 Sim <span class="dot" id="dot-ros2_sim"></span></h2>
+    <div class="log-stats" id="stats-ros2_sim">waiting for first message&hellip;</div>
+    <div class="log-tail" id="tail-ros2_sim"></div>
+  </section>
+
+  <section class="log-column" data-source="backend">
+    <h2>Backend <span class="dot" id="dot-backend"></span></h2>
+    <div class="log-stats" id="stats-backend">waiting for first message&hellip;</div>
+    <div class="log-tail" id="tail-backend"></div>
+  </section>
+
+  <section class="log-column" data-source="dashboard">
+    <h2>Dashboard <span class="dot" id="dot-dashboard"></span></h2>
+    <div class="log-stats" id="stats-dashboard">waiting for first message&hellip;</div>
+    <div class="log-tail" id="tail-dashboard"></div>
+  </section>
+</main>
+
+<script src="js/ws_client.js"></script>
+<script src="js/logs.js"></script>
+</body>
+</html>

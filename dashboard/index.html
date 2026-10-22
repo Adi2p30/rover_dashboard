@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Rover Telemetry Dashboard</title>
+<link rel="stylesheet" href="css/style.css" />
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+</head>
+<body>
+<header>
+  <h1>Rover Telemetry Dashboard</h1>
+  <span id="connection-status">disconnected</span>
+</header>
+
+<div id="alert-banner" class="ok">All systems normal</div>
+
+<main>
+  <div class="panel full">
+    <h2>Joints</h2>
+    <div id="joints-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px 20px;"></div>
+  </div>
+
+  <div class="panel">
+    <h2>IMU</h2>
+    <div class="chart-label">Roll (deg) <span class="value" id="val-imu-orientation"></span></div>
+    <div class="chart-wrap" id="wrap-imu"><canvas id="chart-imu"></canvas></div>
+  </div>
+
+  <div class="panel">
+    <h2>Wheels</h2>
+    <div id="wheels-grid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:16px 20px;"></div>
+  </div>
+
+  <div class="panel">
+    <h2>Comms</h2>
+    <div class="hb" id="hb-comms"><span>Comms heartbeat</span><span class="hb-status">live</span></div>
+  </div>
+
+  <div class="panel">
+    <h2>Camera</h2>
+    <img id="camera-frame-img" style="width:100%;border-radius:3px;background:#eee;display:block;" alt="latest camera frame" />
+    <div class="chart-label">last frame <span class="value" id="val-camera-frame-ts"></span></div>
+  </div>
+
+  <div class="panel full">
+    <h2>Arm</h2>
+    <div id="arm-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px 20px;"></div>
+  </div>
+
+  <div class="panel full" id="alert-log">
+    <h2>Alert Log</h2>
+    <table>
+      <thead><tr><th>Time</th><th>Severity</th><th>Point</th><th>Message</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</main>
+
+<script src="js/ws_client.js"></script>
+<script src="js/charts.js"></script>
+<script src="js/alerts.js"></script>
+<script>
+  function buildJointsGrid() {
+    const grid = document.getElementById("joints-grid");
+    JOINT_IDS.forEach((j) => {
+      const div = document.createElement("div");
+      div.innerHTML = `
+        <div style="font-size:12px;color:#666;margin-bottom:4px;">Joint ${j}</div>
+        <div class="chart-label">position <span class="value" id="val-joints-${j}-position"></span></div>
+        <div class="chart-wrap" id="wrap-joint-${j}-position"><canvas id="chart-joint-${j}-position"></canvas></div>
+        <div class="chart-label">torque <span class="value" id="val-joints-${j}-torque"></span></div>
+        <div class="chart-wrap" id="wrap-joint-${j}-torque"><canvas id="chart-joint-${j}-torque"></canvas></div>
+      `;
+      grid.appendChild(div);
+    });
+  }
+
+  function buildWheelsGrid() {
+    const grid = document.getElementById("wheels-grid");
+    WHEEL_IDS.forEach((w) => {
+      const div = document.createElement("div");
+      div.innerHTML = `
+        <div style="font-size:12px;color:#666;">Wheel ${w}</div>
+        <div id="wheel-${w}-speed" style="font-size:12px;color:#111;margin-bottom:2px;"></div>
+        <div class="chart-label">slip ratio <span class="value" id="val-wheels-${w}-slip"></span></div>
+        <div class="chart-wrap" id="wrap-wheel-${w}-slip"><canvas id="chart-wheel-${w}-slip"></canvas></div>
+      `;
+      grid.appendChild(div);
+    });
+  }
+
+  function buildArmGrid() {
+    const grid = document.getElementById("arm-grid");
+    ARM_JOINT_NAMES.forEach((name) => {
+      const div = document.createElement("div");
+      div.innerHTML = `
+        <div style="font-size:12px;color:#666;margin-bottom:4px;">${name}</div>
+        <div class="chart-label">position (rad) <span class="value" id="val-arm-${name}-position"></span></div>
+        <div class="chart-wrap" id="wrap-arm-${name}-position"><canvas id="chart-arm-${name}-position"></canvas></div>
+        <div class="chart-label">effort <span class="value" id="val-arm-${name}-effort"></span></div>
+        <div class="chart-label">error (rad) <span class="value" id="val-arm-${name}-error"></span></div>
+      `;
+      grid.appendChild(div);
+    });
+  }
+
+  buildJointsGrid();
+  buildWheelsGrid();
+  buildArmGrid();
+  initCharts();
+
+  let rxCount = 0;
+  let lastPointId = "";
+  setInterval(() => {
+    if (rxCount > 0) {
+      console.log(`[dashboard] displayed=${rxCount}/s last_point=${lastPointId}`);
+    }
+    rxCount = 0;
+  }, 1000);
+
+  connect((frame) => {
+    rxCount++;
+    if (frame.point_id) lastPointId = frame.point_id;
+
+    if (frame.type === "snapshot") {
+      console.log("[dashboard] received snapshot", frame);
+      handleSnapshot(frame);
+      return;
+    }
+    if (frame.type === "telemetry") {
+      handleTelemetry(frame);
+      return;
+    }
+    if (frame.type === "detector") {
+      console.log("[dashboard] detector update", frame.point_id, frame.state, frame.detail);
+      if (frame.point_id === "comms/heartbeat") {
+        updateHeartbeatDot(frame.point_id, frame.state);
+      }
+      return;
+    }
+    if (frame.type === "alert") {
+      console.log("[dashboard] alert", frame.alert);
+      handleAlert(frame);
+      return;
+    }
+    if (frame.type === "camera_frame") {
+      updateCameraFrame(frame);
+      return;
+    }
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+paho-mqtt
+numpy
+pandas
+pydantic
+websockets
+pytest
+httpx
